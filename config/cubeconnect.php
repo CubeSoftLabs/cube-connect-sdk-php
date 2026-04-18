@@ -10,6 +10,9 @@ return [
     | Your CubeConnect API key. Generate one from the dashboard:
     | Settings > API Keys
     |
+    | Each key is automatically scoped to the tenant it was created under —
+    | no separate tenant ID is needed.
+    |
     */
 
     'api_key' => env('CUBECONNECT_API_KEY'),
@@ -27,17 +30,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Tenant ID
-    |--------------------------------------------------------------------------
-    |
-    | Optional. Required only if your API key has access to multiple tenants.
-    |
-    */
-
-    'tenant_id' => env('CUBECONNECT_TENANT_ID'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Request Timeout
     |--------------------------------------------------------------------------
     |
@@ -46,5 +38,18 @@ return [
     */
 
     'timeout' => env('CUBECONNECT_TIMEOUT', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Webhook Secret
+    |--------------------------------------------------------------------------
+    |
+    | Your webhook signing secret from the CubeConnect dashboard.
+    | Used to verify that incoming webhook requests are from CubeConnect.
+    | Settings > Webhook > Signing Secret
+    |
+    */
+
+    'webhook_secret' => env('CUBECONNECT_WEBHOOK_SECRET'),
 
 ];

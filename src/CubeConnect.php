@@ -31,13 +31,6 @@ class CubeConnect implements Messaging
     protected string $baseUrl;
 
     /**
-     * The tenant ID for multi-tenant accounts.
-     *
-     * @var string|null
-     */
-    protected ?string $tenantId;
-
-    /**
      * The request timeout in seconds.
      *
      * @var int
@@ -47,17 +40,18 @@ class CubeConnect implements Messaging
     /**
      * Create a new CubeConnect client instance.
      *
+     * The tenant is resolved automatically from the API key — no tenant ID header needed.
+     * Each API key is scoped to a single tenant at creation time.
+     *
      * @param  string  $apiKey
      * @param  string  $baseUrl
-     * @param  string|null  $tenantId
      * @param  int  $timeout
      * @return void
      */
-    public function __construct(string $apiKey, string $baseUrl, ?string $tenantId = null, int $timeout = 30)
+    public function __construct(string $apiKey, string $baseUrl, int $timeout = 30)
     {
         $this->apiKey = $apiKey;
         $this->baseUrl = rtrim($baseUrl, '/');
-        $this->tenantId = $tenantId;
         $this->timeout = $timeout;
     }
 
@@ -111,7 +105,7 @@ class CubeConnect implements Messaging
         ];
 
         if (! empty($params)) {
-            // تحويل المعاملات البسيطة إلى صيغة components المطلوبة من Meta
+            // Convert simple params to the Meta components format required by the API
             $data['components'] = [
                 [
                     'type' => 'body',
@@ -192,15 +186,9 @@ class CubeConnect implements Messaging
      */
     protected function buildRequest(): PendingRequest
     {
-        $request = Http::withToken($this->apiKey)
+        return Http::withToken($this->apiKey)
             ->timeout($this->timeout)
             ->accept('application/json');
-
-        if ($this->tenantId !== null) {
-            $request->withHeaders(['X-TENANT-ID' => $this->tenantId]);
-        }
-
-        return $request;
     }
 
     /**

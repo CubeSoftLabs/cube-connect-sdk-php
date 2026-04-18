@@ -23,7 +23,6 @@ class CubeConnectServiceProvider extends ServiceProvider implements DeferrablePr
             return new CubeConnect(
                 apiKey: $config['api_key'] ?? '',
                 baseUrl: $config['base_url'] ?? 'https://cubeconnect.io',
-                tenantId: $config['tenant_id'] ?? null,
                 timeout: (int) ($config['timeout'] ?? 30),
             );
         });

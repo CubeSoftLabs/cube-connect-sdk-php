@@ -36,8 +36,8 @@ CUBECONNECT_API_KEY=your_api_key_here
 |----------|---------|-------------|
 | `CUBECONNECT_API_KEY` | — | Your API key from the dashboard |
 | `CUBECONNECT_URL` | `https://cubeconnect.io` | API base URL |
-| `CUBECONNECT_TENANT_ID` | `null` | Tenant ID (multi-tenant only) |
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
+| `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
 
 ## Usage
 
@@ -83,6 +83,156 @@ Parameters map to `{{1}}`, `{{2}}`, etc. in the template body. The SDK automatic
 ```php
 $health = CubeConnect::health();
 // ['status' => 'healthy', 'checks' => [...], 'timestamp' => '...']
+```
+
+## Webhooks
+
+Receive real-time notifications from CubeConnect for messages, campaigns, templates, chatbot flows, and quality events.
+
+### Setup
+
+1. Configure your webhook URL and signing secret in **Settings → Webhook** on your CubeConnect dashboard
+2. Add the secret to your `.env`:
+
+```
+CUBECONNECT_WEBHOOK_SECRET=your_webhook_secret_here
+```
+
+### Verifying Webhook Signatures
+
+Use the included middleware to automatically verify signatures:
+
+```php
+// routes/api.php
+use CubeConnect\Webhooks\WebhookHandler;
+
+Route::post('/cubeconnect/webhook', [WebhookController::class, 'handle'])
+    ->middleware(WebhookHandler::class);
+```
+
+Or register it as a named middleware in `bootstrap/app.php`:
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->alias([
+        'cubeconnect.webhook' => \CubeConnect\Webhooks\WebhookHandler::class,
+    ]);
+})
+```
+
+Then use it:
+
+```php
+Route::post('/cubeconnect/webhook', [WebhookController::class, 'handle'])
+    ->middleware('cubeconnect.webhook');
+```
+
+### Manual Signature Verification
+
+```php
+use CubeConnect\Webhooks\WebhookSignature;
+
+$isValid = WebhookSignature::verify(
+    payload: $request->getContent(),
+    signature: $request->header('X-Webhook-Signature'),
+    timestamp: $request->header('X-Webhook-Timestamp'),
+    secret: config('cubeconnect.webhook_secret'),
+);
+```
+
+### Handling Webhook Events
+
+Use the `WebhookEvent` DTO for clean event handling:
+
+```php
+use CubeConnect\DTOs\WebhookEvent;
+
+class WebhookController extends Controller
+{
+    public function handle(Request $request)
+    {
+        $event = WebhookEvent::fromRequest($request);
+
+        match (true) {
+            $event->isMessageReceived() => $this->handleMessage($event),
+            $event->isMessageStatusUpdated() => $this->handleStatus($event),
+            $event->isCampaignCompleted() => $this->handleCampaign($event),
+            $event->isTemplateStatusChanged() => $this->handleTemplate($event),
+            $event->isFlowSessionCompleted() => $this->handleFlow($event),
+            $event->isQualityEvent() => $this->handleQuality($event),
+            default => null,
+        };
+
+        return response('OK', 200);
+    }
+
+    private function handleMessage(WebhookEvent $event)
+    {
+        $from = $event->get('from');           // "966501234567"
+        $content = $event->get('content');     // "Hello, I need help"
+        $type = $event->get('type');           // "text"
+    }
+
+    private function handleStatus(WebhookEvent $event)
+    {
+        $messageId = $event->get('message_id');
+        $status = $event->get('status');       // "delivered", "read", "failed"
+    }
+
+    private function handleCampaign(WebhookEvent $event)
+    {
+        $name = $event->get('name');
+        $sent = $event->get('sent_count');
+        $failed = $event->get('failed_count');
+    }
+
+    private function handleTemplate(WebhookEvent $event)
+    {
+        $templateName = $event->get('template_name');
+        $status = $event->get('status');       // "approved", "rejected"
+    }
+
+    private function handleFlow(WebhookEvent $event)
+    {
+        $phone = $event->get('customer_phone');
+        $flowId = $event->get('flow_id');
+    }
+
+    private function handleQuality(WebhookEvent $event)
+    {
+        $type = $event->get('type');           // "block" or "report"
+        $phone = $event->get('user_phone');
+    }
+}
+```
+
+### Supported Events
+
+| Event | Method | Description |
+|-------|--------|-------------|
+| `message.status_updated` | `isMessageStatusUpdated()` | Message status change (sent, delivered, read, failed) |
+| `message.received` | `isMessageReceived()` | Incoming message from a customer |
+| `campaign.created` | `isCampaignCreated()` | New campaign created |
+| `campaign.started` | `isCampaignStarted()` | Campaign execution started |
+| `campaign.completed` | `isCampaignCompleted()` | Campaign finished |
+| `template.submitted` | `isTemplateSubmitted()` | Template submitted to Meta |
+| `template.status_changed` | `isTemplateStatusChanged()` | Template approved, rejected, or paused |
+| `flow.session_started` | `isFlowSessionStarted()` | Chatbot flow session started |
+| `flow.session_completed` | `isFlowSessionCompleted()` | Chatbot flow session completed |
+| `flow.session_cancelled` | `isFlowSessionCancelled()` | Session cancelled by customer |
+| `account.quality_event` | `isQualityEvent()` | Quality event (block or report) |
+| `webhook.test` | `isTest()` | Connection test ping |
+
+### WebhookEvent Helpers
+
+```php
+$event->event;      // "message.received"
+$event->tenantId;   // 1
+$event->timestamp;  // "2026-03-10T14:30:00+03:00"
+$event->category(); // "message"
+$event->is('message.received'); // true
+$event->isTest();   // false
+$event->toArray();  // Full payload array
 ```
 
 ## Dependency Injection
@@ -169,6 +319,9 @@ The package follows SOLID principles:
 - **`CubeConnect`** — Default implementation using Laravel's HTTP client.
 - **`CubeConnectServiceProvider`** — Deferred provider that only loads when the service is used.
 - **`Facades\CubeConnect`** — Static proxy backed by the `Messaging` contract.
+- **`Webhooks\WebhookHandler`** — Middleware for verifying webhook signatures.
+- **`Webhooks\WebhookSignature`** — HMAC-SHA256 signature verification utility.
+- **`DTOs\WebhookEvent`** — Value object for parsing and handling webhook events.
 
 ## Documentation
 
