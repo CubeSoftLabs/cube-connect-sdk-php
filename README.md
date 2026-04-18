@@ -78,6 +78,8 @@ $response = CubeConnect::sendTemplate(
 
 Parameters map to `{{1}}`, `{{2}}`, etc. in the template body. The SDK automatically converts them to the Meta components format. Templates can be sent at any time.
 
+> **Important:** The `language_code` must exactly match the language of an **approved** version of the template in your CubeConnect account. Passing a mismatched code throws a `ValidationException` with `errorCode = "TEMPLATE_LANGUAGE_MISMATCH"`. The exception's `$errors` array contains `available_languages` listing the valid codes for that template.
+
 ### Health Check
 
 ```php
@@ -278,8 +280,15 @@ try {
 } catch (ValidationException $e) {
     // 422 — Invalid request data
     $e->errorCode; // "VALIDATION_ERROR", "NO_ACTIVE_ACCOUNT",
-                   // "MISSING_ACCESS_TOKEN", "INVALID_PHONE_NUMBER"
+                   // "MISSING_ACCESS_TOKEN", "INVALID_PHONE_NUMBER",
+                   // "TEMPLATE_LANGUAGE_MISMATCH"
     $e->errors;    // ['phone' => ['The phone field is required.']]
+
+    // For TEMPLATE_LANGUAGE_MISMATCH, $errors contains the available language codes:
+    if ($e->errorCode === 'TEMPLATE_LANGUAGE_MISMATCH') {
+        $available = $e->errors['available_languages'] ?? []; // e.g. ["ar"]
+        // Retry with the correct language code
+    }
 } catch (NotFoundException $e) {
     // 404 — Resource not found
     $e->errorCode; // "NOT_FOUND", "TEMPLATE_NOT_FOUND"
