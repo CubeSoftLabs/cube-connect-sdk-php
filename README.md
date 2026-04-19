@@ -80,6 +80,79 @@ Parameters map to `{{1}}`, `{{2}}`, etc. in the template body. The SDK automatic
 
 > **Important:** The `language_code` must exactly match the language of an **approved** version of the template in your CubeConnect account. Passing a mismatched code throws a `ValidationException` with `errorCode = "TEMPLATE_LANGUAGE_MISMATCH"`. The exception's `$errors` array contains `available_languages` listing the valid codes for that template.
 
+### Scheduled Message
+
+Pass `$scheduledAt` (ISO 8601) and `$timezone` (IANA) to schedule a message for future delivery:
+
+```php
+$response = CubeConnect::sendText(
+    '+966501234567',
+    'Your appointment is tomorrow at 10:00 AM.',
+    '2026-05-01T10:00:00',
+    'Asia/Riyadh',
+);
+
+$response->status;      // "scheduled"
+$response->scheduledAt; // "2026-05-01T07:00:00Z" (UTC)
+```
+
+Templates can also be scheduled:
+
+```php
+$response = CubeConnect::sendTemplate(
+    '+966501234567',
+    'appointment_reminder',
+    ['Dr. Ahmed', '10:00 AM'],
+    'ar',
+    '2026-05-01T09:00:00',
+    'Asia/Riyadh',
+);
+```
+
+### Bulk Campaigns
+
+Send a message to a large list of recipients in a single API call:
+
+```php
+$campaign = CubeConnect::createCampaign([
+    'whatsapp_account_id' => 'YOUR_ACCOUNT_ID',  // Dashboard → WhatsApp Numbers → "API ID:"
+    'message_type'        => 'text',
+    'body'                => 'Your exclusive offer expires tomorrow!',
+    'recipients'          => [
+        ['phone' => '+966501234567', 'name' => 'Ahmed'],
+        ['phone' => '+966509876543', 'name' => 'Sara'],
+    ],
+    'campaign_name' => 'Offer Reminder',
+    'scheduled_at'  => '2026-05-01T09:00:00',   // optional
+    '_tz'           => 'Asia/Riyadh',            // required when scheduled_at is set
+]);
+
+$campaign->campaignId;    // "01JX..."
+$campaign->status;        // "pending"
+$campaign->totalCount;    // 2
+$campaign->isScheduled(); // true
+```
+
+#### Get Campaign Status
+
+```php
+$campaign = CubeConnect::getCampaign($campaignId);
+
+$campaign->status;        // "processing", "completed", "cancelled", "failed"
+$campaign->totalCount;    // 500
+$campaign->sentCount;     // 320
+$campaign->failedCount;   // 12
+$campaign->scheduledAt;   // "2026-05-01T06:00:00Z"
+$campaign->isCompleted(); // true
+```
+
+#### Cancel a Scheduled Campaign
+
+```php
+$ok = CubeConnect::cancelCampaign($campaignId);
+// true on success
+```
+
 ### Health Check
 
 ```php
@@ -304,20 +377,47 @@ try {
 
 All exceptions extend `CubeConnectException`, so you can catch the base class for generic handling.
 
-## Response Object
+## Response Objects
 
-All message methods return a `MessageResponse` with the following properties:
+### MessageResponse
+
+Returned by `sendText()` and `sendTemplate()`:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `status` | `string` | `queued` on success |
+| `status` | `string` | `queued` for immediate delivery, `scheduled` for future delivery |
 | `messageLogId` | `int` | Unique tracking ID |
 | `conversationCategory` | `string` | `SERVICE`, `MARKETING`, `UTILITY`, or `AUTHENTICATION` |
 | `cost` | `float` | Message cost |
+| `scheduledAt` | `string\|null` | UTC datetime if scheduled, otherwise `null` |
 
 ```php
-$response->queued();   // true if status is "queued"
-$response->toArray();  // Array representation
+$response->queued();     // true if status is "queued"
+$response->scheduled();  // true if status is "scheduled"
+$response->toArray();    // Array representation
+```
+
+### CampaignResponse
+
+Returned by `createCampaign()` and `getCampaign()`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `campaignId` | `string` | Unique campaign ULID |
+| `name` | `string\|null` | Campaign name |
+| `status` | `string` | `pending`, `processing`, `completed`, `cancelled`, `failed` |
+| `messageType` | `string` | `text` or `template` |
+| `totalCount` | `int` | Total recipients |
+| `sentCount` | `int` | Successfully sent |
+| `failedCount` | `int` | Failed deliveries |
+| `scheduledAt` | `string\|null` | Scheduled UTC datetime |
+| `createdAt` | `string` | Creation timestamp |
+
+```php
+$campaign->isScheduled();  // true if pending with a scheduledAt
+$campaign->isCompleted();  // true if status is "completed"
+$campaign->isCancelled();  // true if status is "cancelled"
+$campaign->toArray();      // Array representation
 ```
 
 ## Architecture
@@ -328,6 +428,8 @@ The package follows SOLID principles:
 - **`CubeConnect`** — Default implementation using Laravel's HTTP client.
 - **`CubeConnectServiceProvider`** — Deferred provider that only loads when the service is used.
 - **`Facades\CubeConnect`** — Static proxy backed by the `Messaging` contract.
+- **`DTOs\MessageResponse`** — Value object for message send results.
+- **`DTOs\CampaignResponse`** — Value object for campaign create/get/cancel results.
 - **`Webhooks\WebhookHandler`** — Middleware for verifying webhook signatures.
 - **`Webhooks\WebhookSignature`** — HMAC-SHA256 signature verification utility.
 - **`DTOs\WebhookEvent`** — Value object for parsing and handling webhook events.
