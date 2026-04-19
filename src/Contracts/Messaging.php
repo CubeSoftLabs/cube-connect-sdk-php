@@ -15,7 +15,8 @@ interface Messaging
      *
      * @param  string       $phone
      * @param  string       $body
-     * @param  string|null  $scheduledAt  ISO 8601 datetime for deferred delivery (e.g. "2026-05-01T10:00:00Z")
+     * @param  string|null  $scheduledAt  ISO 8601 datetime for deferred delivery (e.g. "2026-05-01T10:00:00")
+     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -23,7 +24,7 @@ interface Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendText(string $phone, string $body, ?string $scheduledAt = null): MessageResponse;
+    public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null): MessageResponse;
 
     /**
      * Send a pre-approved template message.
@@ -35,7 +36,8 @@ interface Messaging
      * @param  string       $name
      * @param  array<int, string>  $params
      * @param  string       $languageCode
-     * @param  string|null  $scheduledAt  ISO 8601 datetime for deferred delivery
+     * @param  string|null  $scheduledAt  ISO 8601 datetime for deferred delivery (e.g. "2026-05-01T10:00:00")
+     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -43,7 +45,7 @@ interface Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null): MessageResponse;
+    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null, ?string $timezone = null): MessageResponse;
 
     /**
      * Create a bulk campaign.
@@ -57,6 +59,7 @@ interface Messaging
      *   recipients: array<int, array{phone: string, name?: string, variables?: array<string, string>}>,
      *   campaign_name?: string,
      *   scheduled_at?: string,
+     *   _tz?: string,
      * }  $payload
      * @return \CubeConnect\DTOs\CampaignResponse
      *

@@ -64,7 +64,8 @@ class CubeConnect implements Messaging
      *
      * @param  string       $phone
      * @param  string       $body
-     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00Z")
+     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00")
+     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -72,7 +73,7 @@ class CubeConnect implements Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendText(string $phone, string $body, ?string $scheduledAt = null): MessageResponse
+    public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
     {
         $payload = [
             'phone'        => $phone,
@@ -82,6 +83,10 @@ class CubeConnect implements Messaging
 
         if ($scheduledAt !== null) {
             $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        if ($timezone !== null) {
+            $payload['_tz'] = $timezone;
         }
 
         return $this->send($payload);
@@ -98,7 +103,8 @@ class CubeConnect implements Messaging
      * @param  string       $name
      * @param  array<int, string>  $params
      * @param  string       $languageCode
-     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00Z")
+     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00")
+     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -106,7 +112,7 @@ class CubeConnect implements Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null): MessageResponse
+    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
     {
         $data = [
             'name'          => $name,
@@ -134,6 +140,10 @@ class CubeConnect implements Messaging
 
         if ($scheduledAt !== null) {
             $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        if ($timezone !== null) {
+            $payload['_tz'] = $timezone;
         }
 
         return $this->send($payload);
