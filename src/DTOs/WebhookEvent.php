@@ -5,14 +5,14 @@ namespace CubeConnect\DTOs;
 class WebhookEvent
 {
     public readonly string $event;
-    public readonly int $tenantId;
+    public readonly string $tenantId;
     public readonly string $timestamp;
     public readonly array $data;
 
     public function __construct(array $payload)
     {
         $this->event = $payload['event'] ?? '';
-        $this->tenantId = (int) ($payload['tenant_id'] ?? 0);
+        $this->tenantId = (string) ($payload['tenant_id'] ?? '');
         $this->timestamp = $payload['timestamp'] ?? '';
         $this->data = $payload;
     }

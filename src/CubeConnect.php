@@ -3,6 +3,7 @@
 namespace CubeConnect;
 
 use CubeConnect\Contracts\Messaging;
+use CubeConnect\DTOs\CampaignResponse;
 use CubeConnect\DTOs\MessageResponse;
 use CubeConnect\Exceptions\AuthenticationException;
 use CubeConnect\Exceptions\CubeConnectException;
@@ -45,8 +46,7 @@ class CubeConnect implements Messaging
      *
      * @param  string  $apiKey
      * @param  string  $baseUrl
-     * @param  int  $timeout
-     * @return void
+     * @param  int     $timeout
      */
     public function __construct(string $apiKey, string $baseUrl, int $timeout = 30)
     {
@@ -60,9 +60,11 @@ class CubeConnect implements Messaging
      *
      * Text messages can only be sent within 24 hours of the customer's
      * last inbound message. Outside this window, use sendTemplate() instead.
+     * Pass $scheduledAt (ISO 8601) to schedule the message for future delivery.
      *
-     * @param  string  $phone
-     * @param  string  $body
+     * @param  string       $phone
+     * @param  string       $body
+     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00Z")
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -70,13 +72,19 @@ class CubeConnect implements Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendText(string $phone, string $body): MessageResponse
+    public function sendText(string $phone, string $body, ?string $scheduledAt = null): MessageResponse
     {
-        return $this->send([
-            'phone' => $phone,
+        $payload = [
+            'phone'        => $phone,
             'message_type' => 'text',
-            'data' => ['text' => $body],
-        ]);
+            'data'         => ['text' => $body],
+        ];
+
+        if ($scheduledAt !== null) {
+            $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        return $this->send($payload);
     }
 
     /**
@@ -84,12 +92,13 @@ class CubeConnect implements Messaging
      *
      * Template messages can be sent at any time, regardless of the
      * 24-hour messaging window. Parameters map to {{1}}, {{2}}, etc.
-     * placeholders in the template body.
+     * Pass $scheduledAt (ISO 8601) to schedule the message for future delivery.
      *
-     * @param  string  $phone
-     * @param  string  $name
+     * @param  string       $phone
+     * @param  string       $name
      * @param  array<int, string>  $params
-     * @param  string  $languageCode
+     * @param  string       $languageCode
+     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00Z")
      * @return \CubeConnect\DTOs\MessageResponse
      *
      * @throws \CubeConnect\Exceptions\AuthenticationException
@@ -97,10 +106,10 @@ class CubeConnect implements Messaging
      * @throws \CubeConnect\Exceptions\RateLimitException
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
-    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US'): MessageResponse
+    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null): MessageResponse
     {
         $data = [
-            'name' => $name,
+            'name'          => $name,
             'language_code' => $languageCode,
         ];
 
@@ -108,7 +117,7 @@ class CubeConnect implements Messaging
             // Convert simple params to the Meta components format required by the API
             $data['components'] = [
                 [
-                    'type' => 'body',
+                    'type'       => 'body',
                     'parameters' => array_map(fn ($value) => [
                         'type' => 'text',
                         'text' => (string) $value,
@@ -117,11 +126,94 @@ class CubeConnect implements Messaging
             ];
         }
 
-        return $this->send([
-            'phone' => $phone,
+        $payload = [
+            'phone'        => $phone,
             'message_type' => 'template',
-            'data' => $data,
-        ]);
+            'data'         => $data,
+        ];
+
+        if ($scheduledAt !== null) {
+            $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        return $this->send($payload);
+    }
+
+    /**
+     * Create a bulk campaign.
+     *
+     * Recipients is an array of ['phone' => '...', 'name' => '...', 'variables' => [...]].
+     * Optionally pass 'scheduled_at' (ISO 8601) in the payload to schedule the campaign.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return \CubeConnect\DTOs\CampaignResponse
+     *
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\ValidationException
+     * @throws \CubeConnect\Exceptions\RateLimitException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function createCampaign(array $payload): CampaignResponse
+    {
+        try {
+            $response = $this->buildRequest()
+                ->post("{$this->baseUrl}/api/v1/campaigns", $payload);
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return CampaignResponse::fromResponse($response->json('data', []));
+    }
+
+    /**
+     * Retrieve campaign status and statistics.
+     *
+     * @param  string  $campaignId
+     * @return \CubeConnect\DTOs\CampaignResponse
+     *
+     * @throws \CubeConnect\Exceptions\NotFoundException
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function getCampaign(string $campaignId): CampaignResponse
+    {
+        try {
+            $response = $this->buildRequest()
+                ->get("{$this->baseUrl}/api/v1/campaigns/{$campaignId}");
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return CampaignResponse::fromResponse($response->json('data', []));
+    }
+
+    /**
+     * Cancel a scheduled campaign that has not yet started.
+     *
+     * @param  string  $campaignId
+     * @return bool
+     *
+     * @throws \CubeConnect\Exceptions\NotFoundException
+     * @throws \CubeConnect\Exceptions\ValidationException
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function cancelCampaign(string $campaignId): bool
+    {
+        try {
+            $response = $this->buildRequest()
+                ->post("{$this->baseUrl}/api/v1/campaigns/{$campaignId}/cancel");
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return (bool) $response->json('data.success', false);
     }
 
     /**
