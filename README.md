@@ -30,16 +30,16 @@ Add your credentials to `.env`:
 
 ```
 CUBECONNECT_API_KEY=your_api_key_here
+CUBECONNECT_WHATSAPP_ACCOUNT_ID=your_account_id_here
 ```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CUBECONNECT_API_KEY` | — | Your API key from the dashboard |
+| `CUBECONNECT_WHATSAPP_ACCOUNT_ID` | — | Your WhatsApp account ID, required for campaigns. Go to **Dashboard → WhatsApp Numbers** and click the copy icon next to **API ID:** |
 | `CUBECONNECT_URL` | `https://cubeconnect.io` | API base URL |
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
-
-> **Finding your `whatsapp_account_id`:** Go to **Dashboard → WhatsApp Numbers** and click the copy icon next to **API ID:** on any connected number. This value is required for campaign creation.
 
 ## Usage
 
@@ -117,7 +117,7 @@ Send a message to a large list of recipients in a single API call:
 
 ```php
 $campaign = CubeConnect::createCampaign([
-    'whatsapp_account_id' => 'YOUR_ACCOUNT_ID',  // Dashboard → WhatsApp Numbers → "API ID:"
+    'whatsapp_account_id' => env('CUBECONNECT_WHATSAPP_ACCOUNT_ID'),
     'message_type'        => 'text',
     'body'                => 'Your exclusive offer expires tomorrow!',
     'recipients'          => [
