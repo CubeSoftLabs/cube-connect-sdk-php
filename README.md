@@ -35,15 +35,81 @@ CUBECONNECT_WHATSAPP_ACCOUNT_ID=your_account_id_here
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CUBECONNECT_API_KEY` | — | Your API key from the dashboard |
-| `CUBECONNECT_WHATSAPP_ACCOUNT_ID` | — | Your WhatsApp account ID, required for campaigns. Go to **Dashboard → WhatsApp Numbers** and click the copy icon next to **API ID:** |
+| `CUBECONNECT_API_KEY` | — | Your API key — **Settings → API** in the dashboard |
+| `CUBECONNECT_WHATSAPP_ACCOUNT_ID` | — | Your WhatsApp account ID — **Dashboard → WhatsApp Numbers**, click the copy icon next to **API ID:**. Required for bulk campaigns. |
 | `CUBECONNECT_URL` | `https://cubeconnect.io` | API base URL |
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
 
+## Quick Start
+
+WhatsApp restricts outbound messages to recipients who have **not** messaged you in the last 24 hours. To reach any customer — including for the first time — you must use a **pre-approved template**.
+
+Before running the examples below, make sure you have:
+- **API key** — copy it from **Settings → API** in the dashboard
+- **Approved template** — create and submit one in **Dashboard → Templates**, then wait for Meta's approval
+
+```php
+use CubeConnect\Facades\CubeConnect;
+
+// Send a template message — works at any time, to any number
+$response = CubeConnect::sendTemplate(
+    '+966501234567',
+    'order_confirmation',    // template name from Dashboard → Templates
+    ['ORD-1234', '500 SAR'], // maps to {{1}}, {{2}} in the template body
+);
+
+echo $response->status;        // "queued"
+echo $response->messageLogId;  // 4521
+```
+
+> **Sending a plain text reply?** `sendText()` is only for customers who sent you a message within the **last 24 hours**. See [Sending a Text Message](#sending-a-text-message).
+
 ## Usage
 
+### Sending a Template Message
+
+Templates can be sent to any number at any time and are the standard way to initiate a conversation.
+
+```php
+use CubeConnect\Facades\CubeConnect;
+
+$response = CubeConnect::sendTemplate(
+    '+966501234567',
+    'order_confirmation',
+    ['ORD-1234', '500 SAR']
+);
+
+$response->status;               // "queued"
+$response->messageLogId;         // 4521
+$response->conversationCategory; // "MARKETING" or "UTILITY"
+$response->queued();             // true
+```
+
+Parameters map to `{{1}}`, `{{2}}`, etc. in the template body. The SDK automatically converts them to the Meta components format.
+
+**With an explicit language code** (default: `en_US`):
+
+```php
+$response = CubeConnect::sendTemplate(
+    '+966501234567',
+    'order_confirmation',
+    ['ORD-1234', '500 SAR'],
+    'ar',
+);
+```
+
+> **Important:** The `language_code` must exactly match the language of an **approved** version of the template in your CubeConnect account. Passing a mismatched code throws a `ValidationException` with `errorCode = "TEMPLATE_LANGUAGE_MISMATCH"`. The exception's `$errors` array contains `available_languages` listing the valid codes for that template.
+
+**Template without parameters:**
+
+```php
+$response = CubeConnect::sendTemplate('+966501234567', 'welcome_message');
+```
+
 ### Sending a Text Message
+
+> **24-hour window:** `sendText()` only works when the recipient has sent you a message within the **last 24 hours** (a service conversation window). For first-time or outbound messages, use [`sendTemplate()`](#sending-a-template-message) instead.
 
 ```php
 use CubeConnect\Facades\CubeConnect;
@@ -55,32 +121,6 @@ $response->messageLogId;         // 4521
 $response->conversationCategory; // "SERVICE"
 $response->queued();             // true
 ```
-
-> **Note:** Text messages require the recipient to have messaged you within the last 24 hours. Outside this window, use a [template message](#sending-a-template-message).
-
-### Sending a Template Message
-
-```php
-use CubeConnect\Facades\CubeConnect;
-
-$response = CubeConnect::sendTemplate(
-    '+966501234567',
-    'order_confirmation',
-    ['ORD-1234', '500 SAR']
-);
-
-// With explicit language code (default: en_US)
-$response = CubeConnect::sendTemplate(
-    '+966501234567',
-    'order_confirmation',
-    ['ORD-1234', '500 SAR'],
-    'ar'
-);
-```
-
-Parameters map to `{{1}}`, `{{2}}`, etc. in the template body. The SDK automatically converts them to the Meta components format. Templates can be sent at any time.
-
-> **Important:** The `language_code` must exactly match the language of an **approved** version of the template in your CubeConnect account. Passing a mismatched code throws a `ValidationException` with `errorCode = "TEMPLATE_LANGUAGE_MISMATCH"`. The exception's `$errors` array contains `available_languages` listing the valid codes for that template.
 
 ### Scheduled Message
 
@@ -113,7 +153,7 @@ $response = CubeConnect::sendTemplate(
 
 ### Bulk Campaigns
 
-Send a message to a large list of recipients in a single API call:
+Send a message to a large list of recipients in a single API call. Requires the `whatsapp_account_id` found in **Dashboard → WhatsApp Numbers** (copy icon next to **API ID:**).
 
 ```php
 $campaign = CubeConnect::createCampaign([
@@ -345,7 +385,7 @@ use CubeConnect\Exceptions\NotFoundException;
 use CubeConnect\Exceptions\CubeConnectException;
 
 try {
-    CubeConnect::sendText('+966501234567', 'Hello!');
+    CubeConnect::sendTemplate('+966501234567', 'order_confirmation', ['ORD-1234']);
 } catch (AuthenticationException $e) {
     // 401 — Invalid or missing API key
     // 403 — Insufficient permissions or tenant issues
