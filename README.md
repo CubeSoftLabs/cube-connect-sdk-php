@@ -26,7 +26,7 @@ php artisan vendor:publish --tag=cubeconnect-config
 
 ### Environment Variables
 
-Add your API key to `.env`:
+Add your credentials to `.env`:
 
 ```
 CUBECONNECT_API_KEY=your_api_key_here
@@ -38,6 +38,8 @@ CUBECONNECT_API_KEY=your_api_key_here
 | `CUBECONNECT_URL` | `https://cubeconnect.io` | API base URL |
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
+
+> **Finding your `whatsapp_account_id`:** Go to **Dashboard → WhatsApp Numbers** and click the copy icon next to **API ID:** on any connected number. This value is required for campaign creation.
 
 ## Usage
 
