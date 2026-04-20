@@ -25,6 +25,13 @@ class CubeConnect implements Messaging
     protected string $apiKey;
 
     /**
+     * The WhatsApp account ID to send messages from.
+     *
+     * @var string
+     */
+    protected string $whatsappAccountId;
+
+    /**
      * The base URL for the CubeConnect API.
      *
      * @var string
@@ -41,16 +48,15 @@ class CubeConnect implements Messaging
     /**
      * Create a new CubeConnect client instance.
      *
-     * The tenant is resolved automatically from the API key — no tenant ID header needed.
-     * Each API key is scoped to a single tenant at creation time.
-     *
-     * @param  string  $apiKey
+     * @param  string  $apiKey            API key from Settings → API
+     * @param  string  $whatsappAccountId WhatsApp account ID from Dashboard → WhatsApp Numbers → API ID:
      * @param  string  $baseUrl
      * @param  int     $timeout
      */
-    public function __construct(string $apiKey, string $baseUrl, int $timeout = 30)
+    public function __construct(string $apiKey, string $whatsappAccountId, string $baseUrl, int $timeout = 30)
     {
         $this->apiKey = $apiKey;
+        $this->whatsappAccountId = $whatsappAccountId;
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->timeout = $timeout;
     }
@@ -76,9 +82,10 @@ class CubeConnect implements Messaging
     public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
     {
         $payload = [
-            'phone'        => $phone,
-            'message_type' => 'text',
-            'data'         => ['text' => $body],
+            'whatsapp_account_id' => $this->whatsappAccountId,
+            'phone'               => $phone,
+            'message_type'        => 'text',
+            'data'                => ['text' => $body],
         ];
 
         if ($scheduledAt !== null) {
@@ -133,9 +140,10 @@ class CubeConnect implements Messaging
         }
 
         $payload = [
-            'phone'        => $phone,
-            'message_type' => 'template',
-            'data'         => $data,
+            'whatsapp_account_id' => $this->whatsappAccountId,
+            'phone'               => $phone,
+            'message_type'        => 'template',
+            'data'                => $data,
         ];
 
         if ($scheduledAt !== null) {
@@ -165,6 +173,8 @@ class CubeConnect implements Messaging
      */
     public function createCampaign(array $payload): CampaignResponse
     {
+        $payload = array_merge(['whatsapp_account_id' => $this->whatsappAccountId], $payload);
+
         try {
             $response = $this->buildRequest()
                 ->post("{$this->baseUrl}/api/v1/campaigns", $payload);

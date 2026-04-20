@@ -19,6 +19,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | WhatsApp Account ID
+    |--------------------------------------------------------------------------
+    |
+    | Your WhatsApp account ID. Find it in the dashboard:
+    | Dashboard → WhatsApp Numbers → click the copy icon next to "API ID:"
+    |
+    | Required for all message sends and campaigns.
+    |
+    */
+
+    'whatsapp_account_id' => env('CUBECONNECT_WHATSAPP_ACCOUNT_ID'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Base URL
     |--------------------------------------------------------------------------
     |

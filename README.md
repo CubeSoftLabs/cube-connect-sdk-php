@@ -36,7 +36,7 @@ CUBECONNECT_WHATSAPP_ACCOUNT_ID=your_account_id_here
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CUBECONNECT_API_KEY` | — | Your API key — **Settings → API** in the dashboard |
-| `CUBECONNECT_WHATSAPP_ACCOUNT_ID` | — | Your WhatsApp account ID — **Dashboard → WhatsApp Numbers**, click the copy icon next to **API ID:**. Required for bulk campaigns. |
+| `CUBECONNECT_WHATSAPP_ACCOUNT_ID` | — | Your WhatsApp account ID — **Dashboard → WhatsApp Numbers**, click the copy icon next to **API ID:**. Required for all messages and campaigns. |
 | `CUBECONNECT_URL` | `https://cubeconnect.io` | API base URL |
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
@@ -47,6 +47,7 @@ WhatsApp restricts outbound messages to recipients who have **not** messaged you
 
 Before running the examples below, make sure you have:
 - **API key** — copy it from **Settings → API** in the dashboard
+- **WhatsApp Account ID** — copy it from **Dashboard → WhatsApp Numbers** (the **API ID:** copy button next to the number)
 - **Approved template** — create and submit one in **Dashboard → Templates**, then wait for Meta's approval
 
 ```php
@@ -157,10 +158,9 @@ Send a message to a large list of recipients in a single API call. Requires the 
 
 ```php
 $campaign = CubeConnect::createCampaign([
-    'whatsapp_account_id' => env('CUBECONNECT_WHATSAPP_ACCOUNT_ID'),
-    'message_type'        => 'text',
-    'body'                => 'Your exclusive offer expires tomorrow!',
-    'recipients'          => [
+    'message_type' => 'text',
+    'body'         => 'Your exclusive offer expires tomorrow!',
+    'recipients'   => [
         ['phone' => '+966501234567', 'name' => 'Ahmed'],
         ['phone' => '+966509876543', 'name' => 'Sara'],
     ],
