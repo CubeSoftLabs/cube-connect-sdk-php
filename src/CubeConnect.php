@@ -19,108 +19,20 @@ use Illuminate\Support\Facades\Http;
 
 class CubeConnect implements Messaging
 {
-    /**
-     * The API key used for authentication.
-     *
-     * @var string
-     */
     protected string $apiKey;
-
-    /**
-     * The WhatsApp account ID to send messages from.
-     *
-     * @var string
-     */
     protected string $whatsappAccountId;
-
-    /**
-     * The base URL for the CubeConnect API.
-     *
-     * @var string
-     */
     protected string $baseUrl;
-
-    /**
-     * The request timeout in seconds.
-     *
-     * @var int
-     */
     protected int $timeout;
 
-    /**
-     * Create a new CubeConnect client instance.
-     *
-     * @param  string  $apiKey            API key from Settings → API
-     * @param  string  $whatsappAccountId WhatsApp account ID from Dashboard → WhatsApp Numbers → API ID:
-     * @param  string  $baseUrl
-     * @param  int     $timeout
-     */
     public function __construct(string $apiKey, string $whatsappAccountId, string $baseUrl, int $timeout = 30)
     {
-        $this->apiKey = $apiKey;
+        $this->apiKey            = $apiKey;
         $this->whatsappAccountId = $whatsappAccountId;
-        $this->baseUrl = rtrim($baseUrl, '/');
-        $this->timeout = $timeout;
+        $this->baseUrl           = rtrim($baseUrl, '/');
+        $this->timeout           = $timeout;
     }
 
-    /**
-     * Send a text message to a WhatsApp number.
-     *
-     * Text messages can only be sent within 24 hours of the customer's
-     * last inbound message. Outside this window, use sendTemplate() instead.
-     * Pass $scheduledAt (ISO 8601) to schedule the message for future delivery.
-     *
-     * @param  string       $phone
-     * @param  string       $body
-     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00")
-     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
-     * @return \CubeConnect\DTOs\MessageResponse
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\RateLimitException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
-    public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
-    {
-        $payload = [
-            'whatsapp_account_id' => $this->whatsappAccountId,
-            'phone'               => $phone,
-            'message_type'        => 'text',
-            'data'                => ['text' => $body],
-        ];
-
-        if ($scheduledAt !== null) {
-            $payload['scheduled_at'] = $scheduledAt;
-        }
-
-        if ($timezone !== null) {
-            $payload['_tz'] = $timezone;
-        }
-
-        return $this->send($payload);
-    }
-
-    /**
-     * Send a pre-approved template message.
-     *
-     * Template messages can be sent at any time, regardless of the
-     * 24-hour messaging window. Parameters map to {{1}}, {{2}}, etc.
-     * Pass $scheduledAt (ISO 8601) to schedule the message for future delivery.
-     *
-     * @param  string       $phone
-     * @param  string       $name
-     * @param  array<int, string>  $params
-     * @param  string       $languageCode
-     * @param  string|null  $scheduledAt  ISO 8601 (e.g. "2026-05-01T10:00:00")
-     * @param  string|null  $timezone     IANA timezone (e.g. "Asia/Riyadh"). Required when scheduledAt is set.
-     * @return \CubeConnect\DTOs\MessageResponse
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\RateLimitException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. */
     public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
     {
         $data = [
@@ -129,7 +41,6 @@ class CubeConnect implements Messaging
         ];
 
         if (! empty($params)) {
-            // Convert simple params to the Meta components format required by the API
             $data['components'] = [
                 [
                     'type'       => 'body',
@@ -159,20 +70,7 @@ class CubeConnect implements Messaging
         return $this->send($payload);
     }
 
-    /**
-     * Create a bulk campaign.
-     *
-     * Recipients is an array of ['phone' => '...', 'name' => '...', 'variables' => [...]].
-     * Optionally pass 'scheduled_at' (ISO 8601) in the payload to schedule the campaign.
-     *
-     * @param  array<string, mixed>  $payload
-     * @return \CubeConnect\DTOs\CampaignResponse
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\RateLimitException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Create a bulk campaign. */
     public function createCampaign(array $payload): CampaignResponse
     {
         $payload = array_merge(['whatsapp_account_id' => $this->whatsappAccountId], $payload);
@@ -189,16 +87,7 @@ class CubeConnect implements Messaging
         return CampaignResponse::fromResponse($response->json('data', []));
     }
 
-    /**
-     * Retrieve campaign status and statistics.
-     *
-     * @param  string  $campaignId
-     * @return \CubeConnect\DTOs\CampaignResponse
-     *
-     * @throws \CubeConnect\Exceptions\NotFoundException
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Retrieve campaign status and statistics. */
     public function getCampaign(string $campaignId): CampaignResponse
     {
         try {
@@ -213,17 +102,7 @@ class CubeConnect implements Messaging
         return CampaignResponse::fromResponse($response->json('data', []));
     }
 
-    /**
-     * Cancel a scheduled campaign that has not yet started.
-     *
-     * @param  string  $campaignId
-     * @return bool
-     *
-     * @throws \CubeConnect\Exceptions\NotFoundException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Cancel a scheduled campaign that has not yet started. */
     public function cancelCampaign(string $campaignId): bool
     {
         try {
@@ -238,16 +117,7 @@ class CubeConnect implements Messaging
         return (bool) $response->json('data.success', false);
     }
 
-    /**
-     * Get the current status of a previously sent message.
-     *
-     * @param  int  $messageLogId
-     * @return \CubeConnect\DTOs\MessageStatusResponse
-     *
-     * @throws \CubeConnect\Exceptions\NotFoundException
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Get the current delivery status of a sent message. */
     public function getMessageStatus(int $messageLogId): MessageStatusResponse
     {
         try {
@@ -262,15 +132,7 @@ class CubeConnect implements Messaging
         return MessageStatusResponse::fromResponse($response->json('data', []));
     }
 
-    /**
-     * List templates for a WhatsApp account.
-     *
-     * @param  string|null  $status  Filter by status (e.g. 'APPROVED')
-     * @return \CubeConnect\DTOs\TemplateData[]
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** List templates for the configured WhatsApp account. Pass $status to filter (e.g. 'APPROVED'). */
     public function getTemplates(?string $status = null): array
     {
         $query = http_build_query(array_filter([
@@ -293,15 +155,7 @@ class CubeConnect implements Messaging
         );
     }
 
-    /**
-     * Check the platform health status.
-     *
-     * This endpoint does not require authentication.
-     *
-     * @return array{status: string, checks: array{app: bool, database: bool, cache: bool}, timestamp: string}
-     *
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    /** Check the platform health status. No authentication required. */
     public function health(): array
     {
         try {
@@ -323,17 +177,8 @@ class CubeConnect implements Messaging
         return $response->json('data', []);
     }
 
-    /**
-     * Send a message payload to the CubeConnect API.
-     *
-     * @param  array<string, mixed>  $payload
-     * @return \CubeConnect\DTOs\MessageResponse
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\RateLimitException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
+    // ── Private ──────────────────────────────────────────────────────────────
+
     protected function send(array $payload): MessageResponse
     {
         try {
@@ -348,11 +193,6 @@ class CubeConnect implements Messaging
         return MessageResponse::fromResponse($response->json('data', []));
     }
 
-    /**
-     * Build an authenticated HTTP request instance.
-     *
-     * @return \Illuminate\Http\Client\PendingRequest
-     */
     protected function buildRequest(): PendingRequest
     {
         return Http::withToken($this->apiKey)
@@ -360,36 +200,24 @@ class CubeConnect implements Messaging
             ->accept('application/json');
     }
 
-    /**
-     * Handle error responses from the API.
-     *
-     * @param  \Illuminate\Http\Client\Response  $response
-     * @return void
-     *
-     * @throws \CubeConnect\Exceptions\AuthenticationException
-     * @throws \CubeConnect\Exceptions\ValidationException
-     * @throws \CubeConnect\Exceptions\RateLimitException
-     * @throws \CubeConnect\Exceptions\NotFoundException
-     * @throws \CubeConnect\Exceptions\CubeConnectException
-     */
     protected function handleErrors(Response $response): void
     {
         if ($response->successful()) {
             return;
         }
 
-        $error = $response->json('error', []);
-        $code = $error['code'] ?? '';
+        $error   = $response->json('error', []);
+        $code    = $error['code'] ?? '';
         $message = $error['message'] ?? '';
         $details = $error['details'] ?? [];
-        $status = $response->status();
+        $status  = $response->status();
 
         match ($status) {
-            401 => throw AuthenticationException::invalidKey($code, $message),
-            403 => throw AuthenticationException::forbidden($code, $message),
-            404 => throw NotFoundException::resource($code, $message),
-            422 => throw ValidationException::withErrors($code, $message, $details),
-            429 => throw RateLimitException::exceeded($code, $message),
+            401     => throw AuthenticationException::invalidKey($code, $message),
+            403     => throw AuthenticationException::forbidden($code, $message),
+            404     => throw NotFoundException::resource($code, $message),
+            422     => throw ValidationException::withErrors($code, $message, $details),
+            429     => throw RateLimitException::exceeded($code, $message),
             default => throw CubeConnectException::serverError($status, $code, $message),
         };
     }
