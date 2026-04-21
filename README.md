@@ -54,15 +54,25 @@ echo $response->messageLogId;  // 4521
 
 ## Usage
 
-### Sending a Template Message
+### sendTemplate()
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `$phone` | string | Yes | Recipient phone number with country code |
+| `$name` | string | Yes | Template name (e.g., `order_confirmation`) |
+| `$languageCode` | string | Yes | Language code matching the approved template (e.g., `ar`, `en_US`) |
+| `$params` | array | No | Parameters mapping to `{{1}}`, `{{2}}`, etc. |
+| `$scheduledAt` | string\|null | No | ISO 8601 datetime for scheduled delivery |
+| `$timezone` | string\|null | No | IANA timezone. Required when `$scheduledAt` is set |
 
 ```php
 use CubeConnect\Facades\CubeConnect;
 
 $response = CubeConnect::sendTemplate(
-    '+966501234567',          // phone number
-    'order_confirmation',     // template name
-    ['ORD-1234', '500 SAR'],  // params → {{1}}, {{2}}
+    '+966501234567',          // $phone
+    'order_confirmation',     // $name
+    'ar',                     // $languageCode
+    ['ORD-1234', '500 SAR'],  // $params → {{1}}, {{2}}
 );
 
 $response->status;               // "queued"
@@ -71,48 +81,50 @@ $response->conversationCategory; // "UTILITY"
 $response->queued();             // true
 ```
 
-With a language code (default `en_US`):
-
-```php
-$response = CubeConnect::sendTemplate(
-    '+966501234567',
-    'order_confirmation',
-    ['ORD-1234', '500 SAR'],
-    'ar', // language code
-);
-```
-
 Without parameters:
 
 ```php
-$response = CubeConnect::sendTemplate('+966501234567', 'welcome_message');
+$response = CubeConnect::sendTemplate('+966501234567', 'welcome_message', 'ar');
 ```
 
-### Scheduled Message
+Scheduled delivery:
 
 ```php
 $response = CubeConnect::sendTemplate(
     '+966501234567',
     'appointment_reminder',
-    ['Dr. Ahmed', '10:00 AM'],
-    'ar',                      // language code
-    '2026-05-01T09:00:00',     // scheduled_at (ISO 8601)
-    'Asia/Riyadh',             // timezone (IANA)
+    'ar',                      // $languageCode
+    ['Dr. Ahmed', '10:00 AM'], // $params
+    '2026-05-01T09:00:00',     // $scheduledAt (ISO 8601)
+    'Asia/Riyadh',             // $timezone (IANA)
 );
 
 $response->status;      // "scheduled"
 $response->scheduledAt; // "2026-05-01T06:00:00Z" (UTC)
 ```
 
-### Bulk Campaigns
+### createCampaign()
 
 Send a pre-approved template to a large list in a single API call.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `message_type` | string | Yes | Must be `template` |
+| `template_name` | string | Yes | Template name (same as `$name` in `sendTemplate()`) |
+| `template_language` | string | Yes | Language code (same as `$languageCode` in `sendTemplate()`) |
+| `recipients` | array | Yes | List of recipients. Max 50,000 |
+| `recipients[].phone` | string | Yes | Recipient phone number |
+| `recipients[].name` | string | No | Recipient display name |
+| `recipients[].variables` | array | No | Per-recipient variables (e.g., `['1' => 'Ahmed', '2' => 'ORD-1234']`) |
+| `campaign_name` | string | No | Human-readable campaign name |
+| `scheduled_at` | string | No | ISO 8601 datetime for scheduled delivery |
+| `_tz` | string | No | IANA timezone. Required when `scheduled_at` is set |
 
 ```php
 $campaign = CubeConnect::createCampaign([
     'message_type'      => 'template',
-    'template_name'     => 'order_confirmation', // same name used in sendTemplate()
-    'template_language' => 'ar',
+    'template_name'     => 'order_confirmation', // same as $name in sendTemplate()
+    'template_language' => 'ar',                 // same as $languageCode in sendTemplate()
     'recipients'        => [
         ['phone' => '+966501234567', 'name' => 'Ahmed', 'variables' => ['1' => 'Ahmed', '2' => 'ORD-1234', '3' => 'CUBE20']],
         ['phone' => '+966509876543', 'name' => 'Sara',  'variables' => ['1' => 'Sara',  '2' => 'ORD-5678', '3' => 'CUBE15']],

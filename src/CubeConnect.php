@@ -33,7 +33,7 @@ class CubeConnect implements Messaging
     }
 
     /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. */
-    public function sendTemplate(string $phone, string $name, array $params = [], string $languageCode = 'en_US', ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
+    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
     {
         $data = [
             'name'          => $name,
