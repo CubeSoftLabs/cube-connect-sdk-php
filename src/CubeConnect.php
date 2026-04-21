@@ -32,6 +32,27 @@ class CubeConnect implements Messaging
         $this->timeout           = $timeout;
     }
 
+    /** Send a plain text message. Pass $whatsappAccountId to override the default. */
+    public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse
+    {
+        $payload = [
+            'whatsapp_account_id' => $whatsappAccountId ?? $this->whatsappAccountId,
+            'phone'               => $phone,
+            'message_type'        => 'text',
+            'data'                => ['body' => $body],
+        ];
+
+        if ($scheduledAt !== null) {
+            $payload['scheduled_at'] = $scheduledAt;
+        }
+
+        if ($timezone !== null) {
+            $payload['timezone'] = $timezone;
+        }
+
+        return $this->send($payload);
+    }
+
     /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. Pass $whatsappAccountId to override the default. */
     public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse
     {
