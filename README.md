@@ -37,6 +37,40 @@ CUBECONNECT_WHATSAPP_ACCOUNT_ID=your_account_id_here
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
 
+## Multiple WhatsApp Numbers
+
+If your account has more than one connected number, set a default in your `.env` and override it per call using the `$whatsappAccountId` parameter:
+
+```php
+// Send from the default number (CUBECONNECT_WHATSAPP_ACCOUNT_ID)
+CubeConnect::sendTemplate('+966501234567', 'order_confirmation', 'ar', ['ORD-1234']);
+
+// Send from a different number
+CubeConnect::sendTemplate(
+    '+966501234567',
+    'offer_reminder',
+    'ar',
+    ['50%'],
+    null,                  // $scheduledAt
+    null,                  // $timezone
+    '01JX_MARKETING',      // $whatsappAccountId — override
+);
+
+// List templates for a specific number
+$templates = CubeConnect::getTemplates('APPROVED', '01JX_MARKETING');
+
+// Create a campaign from a specific number
+CubeConnect::createCampaign([
+    'message_type'        => 'template',
+    'template_name'       => 'offer_reminder',
+    'template_language'   => 'ar',
+    'recipients'          => [...],
+    'whatsapp_account_id' => '01JX_MARKETING',  // override
+]);
+```
+
+Find each number's ID in **Dashboard → WhatsApp Numbers → API ID:**.
+
 ## Usage
 
 ### sendTemplate()
@@ -104,7 +138,7 @@ Send a pre-approved template to a large list in a single API call.
 | `recipients[].variables` | array | No | Per-recipient variables (e.g., `['1' => 'Ahmed', '2' => 'ORD-1234']`) |
 | `campaign_name` | string | No | Human-readable campaign name |
 | `scheduled_at` | string | No | ISO 8601 datetime for scheduled delivery |
-| `_tz` | string | No | IANA timezone. Required when `scheduled_at` is set |
+| `timezone` | string | No | IANA timezone. Required when `scheduled_at` is set |
 | `whatsapp_account_id` | string | No | Override the default WhatsApp account |
 
 ```php
@@ -134,7 +168,7 @@ $campaign = CubeConnect::createCampaign([
     'recipients'        => [...],
     'campaign_name'     => 'Flash Sale',
     'scheduled_at'      => '2026-05-01T09:00:00', // ISO 8601
-    '_tz'               => 'Asia/Riyadh',          // IANA timezone
+    'timezone'          => 'Asia/Riyadh',            // IANA timezone
 ]);
 
 $campaign->status;        // "pending"
@@ -171,6 +205,31 @@ foreach ($templates as $t) {
     $t->header;       // null
     $t->isApproved(); // true
 }
+```
+
+### Get Message Status
+
+Retrieve the current delivery status of a previously sent message using the `messageLogId` returned by `sendTemplate()`.
+
+```php
+$msg = CubeConnect::getMessageStatus(4521);
+
+$msg->messageLogId;  // 4521
+$msg->status;        // "delivered"
+$msg->toPhone;       // "966501234567"
+$msg->messageType;   // "template"
+$msg->metaMessageId; // "wamid.HBgN..."
+$msg->sentAt;        // "2026-05-01T07:05:00Z"
+$msg->scheduledAt;   // null
+$msg->costAmount;    // 0.05
+$msg->costCurrency;  // "SAR"
+$msg->errorMessage;  // null (set if status is "failed")
+
+$msg->isSent();      // true if status is "sent"
+$msg->isDelivered(); // true if status is "delivered"
+$msg->isRead();      // true if status is "read"
+$msg->isFailed();    // true if status is "failed"
+$msg->isScheduled(); // true if status is "scheduled"
 ```
 
 ### Health Check
@@ -261,39 +320,6 @@ class OrderController extends Controller
 }
 ```
 
-## Error Handling
-
-```php
-use CubeConnect\Facades\CubeConnect;
-use CubeConnect\Exceptions\AuthenticationException;
-use CubeConnect\Exceptions\ValidationException;
-use CubeConnect\Exceptions\RateLimitException;
-use CubeConnect\Exceptions\NotFoundException;
-use CubeConnect\Exceptions\CubeConnectException;
-
-try {
-    CubeConnect::sendTemplate('+966501234567', 'order_confirmation', ['ORD-1234']);
-} catch (AuthenticationException $e) {
-    // 401/403 — Invalid API key or permissions
-    $e->errorCode;  // "INVALID_API_KEY", "FORBIDDEN", ...
-    $e->statusCode; // 401 or 403
-} catch (ValidationException $e) {
-    // 422 — Invalid request data
-    $e->errorCode; // "VALIDATION_ERROR", "INVALID_PHONE_NUMBER", ...
-    $e->errors;    // ['phone' => ['The phone field is required.']]
-} catch (NotFoundException $e) {
-    // 404 — Resource not found
-    $e->errorCode; // "NOT_FOUND", "TEMPLATE_NOT_FOUND"
-} catch (RateLimitException $e) {
-    // 429 — Rate or plan limit exceeded
-    $e->errorCode; // "RATE_LIMIT_EXCEEDED", "PLAN_LIMIT_REACHED", ...
-} catch (CubeConnectException $e) {
-    // 5xx or network errors
-    $e->errorCode;  // "INTERNAL_ERROR", "MESSAGE_SEND_FAILED", ...
-    $e->statusCode;
-}
-```
-
 ## Response Objects
 
 ### MessageResponse
@@ -334,6 +360,89 @@ $campaign->isScheduled(); // true if pending with a scheduledAt
 $campaign->isCompleted(); // true if status is "completed"
 $campaign->isCancelled(); // true if status is "cancelled"
 $campaign->toArray();     // Array representation
+```
+
+### MessageStatusResponse
+
+Returned by `getMessageStatus()`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `messageLogId` | `int` | Unique message log ID |
+| `status` | `string` | `queued`, `scheduled`, `sent`, `delivered`, `read`, or `failed` |
+| `toPhone` | `string` | Recipient phone number |
+| `messageType` | `string` | `template` or `text` |
+| `metaMessageId` | `string\|null` | WhatsApp message ID (set after delivery) |
+| `sentAt` | `string\|null` | UTC datetime when sent to WhatsApp |
+| `scheduledAt` | `string\|null` | UTC datetime of scheduled delivery |
+| `costAmount` | `float` | Message cost |
+| `costCurrency` | `string` | Currency code (e.g., `SAR`) |
+| `errorMessage` | `string\|null` | Error details if status is `failed` |
+| `createdAt` | `string` | UTC creation datetime |
+
+```php
+$msg->isSent();      // true if status is "sent"
+$msg->isDelivered(); // true if status is "delivered"
+$msg->isRead();      // true if status is "read"
+$msg->isFailed();    // true if status is "failed"
+$msg->isScheduled(); // true if status is "scheduled"
+$msg->toArray();     // Array representation
+```
+
+## Error Reference
+
+| HTTP | Error Code | Cause |
+|------|------------|-------|
+| 401 | `AUTHENTICATION_REQUIRED` | No API key provided in the request |
+| 401 | `INVALID_API_KEY` | API key is invalid or has been revoked |
+| 403 | `FORBIDDEN` | API key does not have permission for this action |
+| 403 | `API_KEY_NO_TENANT` | API key is not linked to any account |
+| 404 | `NOT_FOUND` | The requested resource does not exist |
+| 404 | `TEMPLATE_NOT_FOUND` | Template name not found in your account |
+| 422 | `VALIDATION_ERROR` | Request failed input validation — check `error.details` for field-level errors |
+| 422 | `INVALID_PHONE_NUMBER` | Phone number is not in a valid international format |
+| 422 | `NO_ACTIVE_ACCOUNT` | No connected WhatsApp number found for the given `whatsapp_account_id` |
+| 422 | `MISSING_ACCESS_TOKEN` | The selected WhatsApp number has no Meta access token configured |
+| 422 | `TEMPLATE_LANGUAGE_MISMATCH` | Language code does not match any approved version of this template |
+| 422 | `TEMPLATE_PARAMS_MISMATCH` | Fewer parameters provided than the template requires |
+| 429 | `RATE_LIMIT_EXCEEDED` | Too many API requests — apply exponential backoff and retry |
+| 429 | `PLAN_LIMIT_REACHED` | Monthly message quota reached — upgrade your plan |
+| 429 | `SUBSCRIPTION_EXPIRED` | Subscription has expired |
+| 500 | `MESSAGE_SEND_FAILED` | WhatsApp API rejected or failed to deliver the message |
+| 500 | `INTERNAL_ERROR` | Unexpected server error — contact support if this persists |
+| 503 | `SERVICE_DEGRADED` | One or more platform services are temporarily unavailable |
+
+## Error Handling
+
+```php
+use CubeConnect\Facades\CubeConnect;
+use CubeConnect\Exceptions\AuthenticationException;
+use CubeConnect\Exceptions\ValidationException;
+use CubeConnect\Exceptions\RateLimitException;
+use CubeConnect\Exceptions\NotFoundException;
+use CubeConnect\Exceptions\CubeConnectException;
+
+try {
+    CubeConnect::sendTemplate('+966501234567', 'order_confirmation', 'ar', ['ORD-1234']);
+} catch (AuthenticationException $e) {
+    // 401/403 — Invalid API key or permissions
+    $e->errorCode;  // "INVALID_API_KEY", "FORBIDDEN", ...
+    $e->statusCode; // 401 or 403
+} catch (ValidationException $e) {
+    // 422 — Invalid request data
+    $e->errorCode; // "VALIDATION_ERROR", "INVALID_PHONE_NUMBER", ...
+    $e->errors;    // ['phone' => ['The phone field is required.']]
+} catch (NotFoundException $e) {
+    // 404 — Resource not found
+    $e->errorCode; // "NOT_FOUND", "TEMPLATE_NOT_FOUND"
+} catch (RateLimitException $e) {
+    // 429 — Rate or plan limit exceeded
+    $e->errorCode; // "RATE_LIMIT_EXCEEDED", "PLAN_LIMIT_REACHED", ...
+} catch (CubeConnectException $e) {
+    // 5xx or network errors
+    $e->errorCode;  // "INTERNAL_ERROR", "MESSAGE_SEND_FAILED", ...
+    $e->statusCode;
+}
 ```
 
 ## Documentation

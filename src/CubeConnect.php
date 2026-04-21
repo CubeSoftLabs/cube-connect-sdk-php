@@ -64,7 +64,7 @@ class CubeConnect implements Messaging
         }
 
         if ($timezone !== null) {
-            $payload['_tz'] = $timezone;
+            $payload['timezone'] = $timezone;
         }
 
         return $this->send($payload);
