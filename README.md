@@ -64,6 +64,7 @@ echo $response->messageLogId;  // 4521
 | `$params` | array | No | Parameters mapping to `{{1}}`, `{{2}}`, etc. |
 | `$scheduledAt` | string\|null | No | ISO 8601 datetime for scheduled delivery |
 | `$timezone` | string\|null | No | IANA timezone. Required when `$scheduledAt` is set |
+| `$whatsappAccountId` | string\|null | No | Override the default WhatsApp account (useful with multiple numbers) |
 
 ```php
 use CubeConnect\Facades\CubeConnect;
@@ -119,6 +120,7 @@ Send a pre-approved template to a large list in a single API call.
 | `campaign_name` | string | No | Human-readable campaign name |
 | `scheduled_at` | string | No | ISO 8601 datetime for scheduled delivery |
 | `_tz` | string | No | IANA timezone. Required when `scheduled_at` is set |
+| `whatsapp_account_id` | string | No | Override the default WhatsApp account |
 
 ```php
 $campaign = CubeConnect::createCampaign([

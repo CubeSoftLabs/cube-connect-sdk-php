@@ -9,10 +9,10 @@ use CubeConnect\DTOs\TemplateData;
 
 interface Messaging
 {
-    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. */
-    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null): MessageResponse;
+    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. Pass $whatsappAccountId to override the default. */
+    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse;
 
-    /** Create a bulk campaign. */
+    /** Create a bulk campaign. Pass whatsapp_account_id inside $payload to override the default. */
     public function createCampaign(array $payload): CampaignResponse;
 
     /** Retrieve campaign status and statistics. */
@@ -24,8 +24,8 @@ interface Messaging
     /** Get the current delivery status of a sent message. */
     public function getMessageStatus(int $messageLogId): MessageStatusResponse;
 
-    /** List templates for the configured WhatsApp account. Pass $status to filter (e.g. 'APPROVED'). */
-    public function getTemplates(?string $status = null): array;
+    /** List templates. Pass $whatsappAccountId to override the default. Pass $status to filter (e.g. 'APPROVED'). */
+    public function getTemplates(?string $status = null, ?string $whatsappAccountId = null): array;
 
     /** Check the platform health status. No authentication required. */
     public function health(): array;

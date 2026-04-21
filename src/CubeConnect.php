@@ -32,8 +32,8 @@ class CubeConnect implements Messaging
         $this->timeout           = $timeout;
     }
 
-    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. */
-    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null): MessageResponse
+    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. Pass $whatsappAccountId to override the default. */
+    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse
     {
         $data = [
             'name'          => $name,
@@ -53,7 +53,7 @@ class CubeConnect implements Messaging
         }
 
         $payload = [
-            'whatsapp_account_id' => $this->whatsappAccountId,
+            'whatsapp_account_id' => $whatsappAccountId ?? $this->whatsappAccountId,
             'phone'               => $phone,
             'message_type'        => 'template',
             'data'                => $data,
@@ -132,11 +132,11 @@ class CubeConnect implements Messaging
         return MessageStatusResponse::fromResponse($response->json('data', []));
     }
 
-    /** List templates for the configured WhatsApp account. Pass $status to filter (e.g. 'APPROVED'). */
-    public function getTemplates(?string $status = null): array
+    /** List templates. Pass $whatsappAccountId to override the default. Pass $status to filter (e.g. 'APPROVED'). */
+    public function getTemplates(?string $status = null, ?string $whatsappAccountId = null): array
     {
         $query = http_build_query(array_filter([
-            'whatsapp_account_id' => $this->whatsappAccountId,
+            'whatsapp_account_id' => $whatsappAccountId ?? $this->whatsappAccountId,
             'status'              => $status,
         ]));
 
