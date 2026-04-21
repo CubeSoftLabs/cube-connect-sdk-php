@@ -4,6 +4,8 @@ namespace CubeConnect\Contracts;
 
 use CubeConnect\DTOs\CampaignResponse;
 use CubeConnect\DTOs\MessageResponse;
+use CubeConnect\DTOs\MessageStatusResponse;
+use CubeConnect\DTOs\TemplateData;
 
 interface Messaging
 {
@@ -94,6 +96,29 @@ interface Messaging
      * @throws \CubeConnect\Exceptions\CubeConnectException
      */
     public function cancelCampaign(string $campaignId): bool;
+
+    /**
+     * Get the current status of a previously sent message.
+     *
+     * @param  int  $messageLogId
+     * @return \CubeConnect\DTOs\MessageStatusResponse
+     *
+     * @throws \CubeConnect\Exceptions\NotFoundException
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function getMessageStatus(int $messageLogId): MessageStatusResponse;
+
+    /**
+     * List templates for a WhatsApp account.
+     *
+     * @param  string|null  $status  Filter by status (e.g. 'APPROVED')
+     * @return \CubeConnect\DTOs\TemplateData[]
+     *
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function getTemplates(?string $status = null): array;
 
     /**
      * Check the platform health status.

@@ -5,6 +5,8 @@ namespace CubeConnect;
 use CubeConnect\Contracts\Messaging;
 use CubeConnect\DTOs\CampaignResponse;
 use CubeConnect\DTOs\MessageResponse;
+use CubeConnect\DTOs\MessageStatusResponse;
+use CubeConnect\DTOs\TemplateData;
 use CubeConnect\Exceptions\AuthenticationException;
 use CubeConnect\Exceptions\CubeConnectException;
 use CubeConnect\Exceptions\NotFoundException;
@@ -234,6 +236,61 @@ class CubeConnect implements Messaging
         $this->handleErrors($response);
 
         return (bool) $response->json('data.success', false);
+    }
+
+    /**
+     * Get the current status of a previously sent message.
+     *
+     * @param  int  $messageLogId
+     * @return \CubeConnect\DTOs\MessageStatusResponse
+     *
+     * @throws \CubeConnect\Exceptions\NotFoundException
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function getMessageStatus(int $messageLogId): MessageStatusResponse
+    {
+        try {
+            $response = $this->buildRequest()
+                ->get("{$this->baseUrl}/api/v1/messages/{$messageLogId}");
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return MessageStatusResponse::fromResponse($response->json('data', []));
+    }
+
+    /**
+     * List templates for a WhatsApp account.
+     *
+     * @param  string|null  $status  Filter by status (e.g. 'APPROVED')
+     * @return \CubeConnect\DTOs\TemplateData[]
+     *
+     * @throws \CubeConnect\Exceptions\AuthenticationException
+     * @throws \CubeConnect\Exceptions\CubeConnectException
+     */
+    public function getTemplates(?string $status = null): array
+    {
+        $query = http_build_query(array_filter([
+            'whatsapp_account_id' => $this->whatsappAccountId,
+            'status'              => $status,
+        ]));
+
+        try {
+            $response = $this->buildRequest()
+                ->get("{$this->baseUrl}/api/v1/templates?{$query}");
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return array_map(
+            fn (array $item) => TemplateData::fromArray($item),
+            $response->json('data', []),
+        );
     }
 
     /**
