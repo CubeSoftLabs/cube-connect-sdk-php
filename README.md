@@ -37,21 +37,6 @@ CUBECONNECT_WHATSAPP_ACCOUNT_ID=your_account_id_here
 | `CUBECONNECT_TIMEOUT` | `30` | Request timeout in seconds |
 | `CUBECONNECT_WEBHOOK_SECRET` | `null` | Webhook signing secret for signature verification |
 
-## Quick Start
-
-```php
-use CubeConnect\Facades\CubeConnect;
-
-$response = CubeConnect::sendTemplate(
-    '+966501234567',
-    'order_confirmation',    // template name from Dashboard → Templates
-    ['ORD-1234', '500 SAR'], // maps to {{1}}, {{2}} in the template body
-);
-
-echo $response->status;        // "queued"
-echo $response->messageLogId;  // 4521
-```
-
 ## Usage
 
 ### sendTemplate()
@@ -125,20 +110,34 @@ Send a pre-approved template to a large list in a single API call.
 ```php
 $campaign = CubeConnect::createCampaign([
     'message_type'      => 'template',
-    'template_name'     => 'order_confirmation', // same as $name in sendTemplate()
-    'template_language' => 'ar',                 // same as $languageCode in sendTemplate()
+    'template_name'     => 'order_confirmation',
+    'template_language' => 'ar',
     'recipients'        => [
-        ['phone' => '+966501234567', 'name' => 'Ahmed', 'variables' => ['1' => 'Ahmed', '2' => 'ORD-1234', '3' => 'CUBE20']],
-        ['phone' => '+966509876543', 'name' => 'Sara',  'variables' => ['1' => 'Sara',  '2' => 'ORD-5678', '3' => 'CUBE15']],
+        ['phone' => '+966501234567', 'name' => 'Ahmed', 'variables' => ['1' => 'Ahmed', '2' => 'ORD-1234']],
+        ['phone' => '+966509876543', 'name' => 'Sara',  'variables' => ['1' => 'Sara',  '2' => 'ORD-5678']],
     ],
-    'campaign_name' => 'Offer Reminder',
-    'scheduled_at'  => '2026-05-01T09:00:00', // optional
-    '_tz'           => 'Asia/Riyadh',          // required when scheduled_at is set
+    'campaign_name' => 'Order Notifications',
 ]);
 
-$campaign->campaignId;    // "01JX..."
+$campaign->campaignId; // "01JX..."
+$campaign->status;     // "pending"
+$campaign->totalCount; // 2
+```
+
+Scheduled delivery:
+
+```php
+$campaign = CubeConnect::createCampaign([
+    'message_type'      => 'template',
+    'template_name'     => 'offer_reminder',
+    'template_language' => 'ar',
+    'recipients'        => [...],
+    'campaign_name'     => 'Flash Sale',
+    'scheduled_at'      => '2026-05-01T09:00:00', // ISO 8601
+    '_tz'               => 'Asia/Riyadh',          // IANA timezone
+]);
+
 $campaign->status;        // "pending"
-$campaign->totalCount;    // 2
 $campaign->isScheduled(); // true
 ```
 
@@ -168,7 +167,7 @@ $templates = CubeConnect::getTemplates('APPROVED');
 foreach ($templates as $t) {
     $t->name;         // "order_confirmation"
     $t->paramsCount;  // 3
-    $t->body;         // "مرحباً {{1}}، طلبك رقم {{2}} تم شحنه."
+    $t->body;         // "Hello {{1}}, your order {{2}} has been shipped."
     $t->header;       // null
     $t->isApproved(); // true
 }
