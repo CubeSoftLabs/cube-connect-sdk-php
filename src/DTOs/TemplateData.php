@@ -10,6 +10,8 @@ readonly class TemplateData
         public string $category,
         public string $status,
         public int $paramsCount,
+        public ?string $body,
+        public ?string $header,
     ) {}
 
     public static function fromArray(array $data): static
@@ -20,6 +22,8 @@ readonly class TemplateData
             category:    $data['category'] ?? '',
             status:      $data['status'] ?? '',
             paramsCount: (int) ($data['params_count'] ?? 0),
+            body:        $data['body'] ?? null,
+            header:      $data['header'] ?? null,
         );
     }
 
@@ -36,6 +40,8 @@ readonly class TemplateData
             'category'     => $this->category,
             'status'       => $this->status,
             'params_count' => $this->paramsCount,
+            'body'         => $this->body,
+            'header'       => $this->header,
         ];
     }
 }

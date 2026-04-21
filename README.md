@@ -168,6 +168,8 @@ $templates = CubeConnect::getTemplates('APPROVED');
 foreach ($templates as $t) {
     $t->name;         // "order_confirmation"
     $t->paramsCount;  // 3
+    $t->body;         // "مرحباً {{1}}، طلبك رقم {{2}} تم شحنه."
+    $t->header;       // null
     $t->isApproved(); // true
 }
 ```
