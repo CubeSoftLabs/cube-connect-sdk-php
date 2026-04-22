@@ -5,7 +5,7 @@ namespace CubeConnect\DTOs;
 class MessageStatusResponse
 {
     public function __construct(
-        public readonly int $messageLogId,
+        public readonly string $messageLogId,
         public readonly string $status,
         public readonly string $toPhone,
         public readonly string $messageType,
@@ -21,7 +21,7 @@ class MessageStatusResponse
     public static function fromResponse(array $data): static
     {
         return new static(
-            messageLogId:  (int) ($data['message_log_id'] ?? 0),
+            messageLogId:  (string) ($data['message_log_id'] ?? ''),
             status:        $data['status'] ?? '',
             toPhone:       $data['to_phone'] ?? '',
             messageType:   $data['message_type'] ?? '',

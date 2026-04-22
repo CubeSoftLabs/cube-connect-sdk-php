@@ -89,7 +89,7 @@ use CubeConnect\Facades\CubeConnect;
 $response = CubeConnect::sendText('+966501234567', 'مرحباً بك في متجرنا!');
 
 $response->status;       // "queued"
-$response->messageLogId; // 4521
+->messageLogId; // "01JXXX..."
 ```
 
 Scheduled delivery:
@@ -363,7 +363,7 @@ Returned by `sendText()` and `sendTemplate()`:
 | Property | Type | Description |
 |----------|------|-------------|
 | `status` | `string` | `queued` for immediate delivery, `scheduled` for future delivery |
-| `messageLogId` | `int` | Unique tracking ID |
+| `messageLogId` | `string` | Unique tracking ID |
 | `conversationCategory` | `string` | `MARKETING`, `UTILITY`, or `AUTHENTICATION` |
 | `cost` | `float` | Message cost |
 | `scheduledAt` | `string\|null` | UTC datetime if scheduled, otherwise `null` |
@@ -402,7 +402,7 @@ Returned by `getMessageStatus()`:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `messageLogId` | `int` | Unique message log ID |
+| `messageLogId` | `string` | Unique message log ID |
 | `status` | `string` | `queued`, `scheduled`, `sent`, `delivered`, `read`, or `failed` |
 | `toPhone` | `string` | Recipient phone number |
 | `messageType` | `string` | `template` or `text` |

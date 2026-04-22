@@ -39,7 +39,7 @@ class CubeConnect implements Messaging
             'whatsapp_account_id' => $whatsappAccountId ?? $this->whatsappAccountId,
             'phone'               => $phone,
             'message_type'        => 'text',
-            'data'                => ['body' => $body],
+            'data'                => ['text' => $body],
         ];
 
         if ($scheduledAt !== null) {
@@ -139,7 +139,7 @@ class CubeConnect implements Messaging
     }
 
     /** Get the current delivery status of a sent message. */
-    public function getMessageStatus(int $messageLogId): MessageStatusResponse
+    public function getMessageStatus(string $messageLogId): MessageStatusResponse
     {
         try {
             $response = $this->buildRequest()

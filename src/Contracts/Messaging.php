@@ -25,7 +25,7 @@ interface Messaging
     public function cancelCampaign(string $campaignId): bool;
 
     /** Get the current delivery status of a sent message. */
-    public function getMessageStatus(int $messageLogId): MessageStatusResponse;
+    public function getMessageStatus(string $messageLogId): MessageStatusResponse;
 
     /** List templates. Pass $whatsappAccountId to override the default. Pass $status to filter (e.g. 'APPROVED'). */
     public function getTemplates(?string $status = null, ?string $whatsappAccountId = null): array;
