@@ -73,6 +73,39 @@ Find each number's ID in **Dashboard → WhatsApp Numbers → API ID:**.
 
 ## Usage
 
+### sendText()
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `$phone` | string | Yes | Recipient phone number with country code |
+| `$body` | string | Yes | Message text (max 4096 characters) |
+| `$scheduledAt` | string\|null | No | ISO 8601 datetime for scheduled delivery |
+| `$timezone` | string\|null | No | IANA timezone. Required when `$scheduledAt` is set |
+| `$whatsappAccountId` | string\|null | No | Override the default WhatsApp account (useful with multiple numbers) |
+
+```php
+use CubeConnect\Facades\CubeConnect;
+
+$response = CubeConnect::sendText('+966501234567', 'مرحباً بك في متجرنا!');
+
+$response->status;       // "queued"
+$response->messageLogId; // 4521
+```
+
+Scheduled delivery:
+
+```php
+$response = CubeConnect::sendText(
+    '+966501234567',
+    'تذكير: موعدك غداً الساعة 10 صباحاً.',
+    '2026-05-01T09:00:00', // $scheduledAt (ISO 8601)
+    'Asia/Riyadh',         // $timezone (IANA)
+);
+
+$response->status;      // "scheduled"
+$response->scheduledAt; // "2026-05-01T06:00:00Z" (UTC)
+```
+
 ### sendTemplate()
 
 | Parameter | Type | Required | Description |
@@ -314,6 +347,7 @@ class OrderController extends Controller
         $messaging->sendTemplate(
             $order->customer_phone,
             'order_shipped',
+            'ar',
             [$order->id, $order->tracking_number],
         );
     }
@@ -324,7 +358,7 @@ class OrderController extends Controller
 
 ### MessageResponse
 
-Returned by `sendTemplate()`:
+Returned by `sendText()` and `sendTemplate()`:
 
 | Property | Type | Description |
 |----------|------|-------------|
