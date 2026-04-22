@@ -3,6 +3,7 @@
 namespace CubeConnect\Contracts;
 
 use CubeConnect\DTOs\CampaignResponse;
+use CubeConnect\DTOs\CampaignRecipientsPage;
 use CubeConnect\DTOs\MessageResponse;
 use CubeConnect\DTOs\MessageStatusResponse;
 use CubeConnect\DTOs\TemplateData;
@@ -23,6 +24,9 @@ interface Messaging
 
     /** Cancel a scheduled campaign that has not yet started. */
     public function cancelCampaign(string $campaignId): bool;
+
+    /** Get paginated list of campaign recipients with delivery status. */
+    public function getCampaignRecipients(string $campaignId, int $page = 1, int $perPage = 50, ?string $status = null): CampaignRecipientsPage;
 
     /** Get the current delivery status of a sent message. */
     public function getMessageStatus(string $messageLogId): MessageStatusResponse;

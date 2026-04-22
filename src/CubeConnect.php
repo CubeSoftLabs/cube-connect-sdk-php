@@ -4,6 +4,7 @@ namespace CubeConnect;
 
 use CubeConnect\Contracts\Messaging;
 use CubeConnect\DTOs\CampaignResponse;
+use CubeConnect\DTOs\CampaignRecipientsPage;
 use CubeConnect\DTOs\MessageResponse;
 use CubeConnect\DTOs\MessageStatusResponse;
 use CubeConnect\DTOs\TemplateData;
@@ -121,6 +122,29 @@ class CubeConnect implements Messaging
         $this->handleErrors($response);
 
         return CampaignResponse::fromResponse($response->json('data', []));
+    }
+
+    /** Get paginated list of campaign recipients with delivery status. */
+    public function getCampaignRecipients(string $campaignId, int $page = 1, int $perPage = 50, ?string $status = null): CampaignRecipientsPage
+    {
+        $query = http_build_query(array_filter([
+            'page'     => $page > 1 ? $page : null,
+            'per_page' => $perPage !== 50 ? $perPage : null,
+            'status'   => $status,
+        ]));
+
+        $url = "{$this->baseUrl}/api/v1/campaigns/{$campaignId}/recipients"
+            . ($query ? "?{$query}" : '');
+
+        try {
+            $response = $this->buildRequest()->get($url);
+        } catch (ConnectionException $e) {
+            throw CubeConnectException::connectionFailed($e);
+        }
+
+        $this->handleErrors($response);
+
+        return CampaignRecipientsPage::fromResponse($response->json('data', []));
     }
 
     /** Cancel a scheduled campaign that has not yet started. */
