@@ -54,9 +54,24 @@ class CubeConnect implements Messaging
         return $this->send($payload);
     }
 
-    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. Pass $whatsappAccountId to override the default. */
-    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse
-    {
+    /**
+     * Send a pre-approved template message. Params map to {{1}}, {{2}}, etc.
+     *
+     * @param  bool  $autoRetryOnFrequencyCap  Opt-in 26h auto-retry when Meta rejects with code 131049
+     *                                         (per-recipient marketing frequency cap). One retry per
+     *                                         chain — the retry never auto-retries again. Recommended
+     *                                         ON for marketing templates, OFF for transactional ones.
+     */
+    public function sendTemplate(
+        string $phone,
+        string $name,
+        string $languageCode,
+        array $params = [],
+        ?string $scheduledAt = null,
+        ?string $timezone = null,
+        ?string $whatsappAccountId = null,
+        bool $autoRetryOnFrequencyCap = false,
+    ): MessageResponse {
         $data = [
             'name'          => $name,
             'language_code' => $languageCode,
@@ -87,6 +102,10 @@ class CubeConnect implements Messaging
 
         if ($timezone !== null) {
             $payload['timezone'] = $timezone;
+        }
+
+        if ($autoRetryOnFrequencyCap) {
+            $payload['auto_retry_on_frequency_cap'] = true;
         }
 
         return $this->send($payload);

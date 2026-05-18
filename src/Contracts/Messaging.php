@@ -13,8 +13,22 @@ interface Messaging
     /** Send a plain text message. Pass $whatsappAccountId to override the default. */
     public function sendText(string $phone, string $body, ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse;
 
-    /** Send a pre-approved template message. Params map to {{1}}, {{2}}, etc. Pass $whatsappAccountId to override the default. */
-    public function sendTemplate(string $phone, string $name, string $languageCode, array $params = [], ?string $scheduledAt = null, ?string $timezone = null, ?string $whatsappAccountId = null): MessageResponse;
+    /**
+     * Send a pre-approved template message. Params map to {{1}}, {{2}}, etc.
+     *
+     * @param  bool  $autoRetryOnFrequencyCap  Opt-in 26h auto-retry when Meta rejects with code 131049
+     *                                         (per-recipient marketing frequency cap). One retry per chain.
+     */
+    public function sendTemplate(
+        string $phone,
+        string $name,
+        string $languageCode,
+        array $params = [],
+        ?string $scheduledAt = null,
+        ?string $timezone = null,
+        ?string $whatsappAccountId = null,
+        bool $autoRetryOnFrequencyCap = false,
+    ): MessageResponse;
 
     /** Create a bulk campaign. Pass whatsapp_account_id inside $payload to override the default. */
     public function createCampaign(array $payload): CampaignResponse;
